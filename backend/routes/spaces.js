@@ -3,6 +3,26 @@ const upload = require('../configMulter.js')
 const pool = require('../configDB.js')
 const router = Router()
 
+router.post('/create-image', upload.array('images', 10), async (req, res) => {
+  const { uid } = req.body; 
+  console.log(uid)
+  console.log(req.files)
+  try {
+    for (const file of req.files) {
+      const imgpath = `uploads/${file.filename}`;
+
+      const photoResult = await pool.query(
+        'INSERT INTO photos (uid, imgpath) VALUES ($1, $2) RETURNING *',
+        [uid, imgpath]    
+      );
+    }
+
+    res.status(201).json({ success: true, message: 'Imágenes subidas exitosamente' });
+  } catch (error) {
+    console.error('Error al insertar imágenes:', error);
+    res.status(500).json({ success: false, message: 'Error interno del servidor' });
+  }
+});
 
 router.post('/create', upload.array('images', 10), async (req, res) => {
   const { uid, name, description, phone, emailSpace } = req.body;
@@ -149,7 +169,6 @@ router.get('/check-space/:uid', async (req, res) => {
 
 router.delete('/delete-image', async (req, res) => {
   const { imgpath } = req.body;
-
   try {
     const result = await pool.query('DELETE FROM photos WHERE imgpath = $1 RETURNING *', [imgpath]);
 
@@ -166,7 +185,7 @@ router.delete('/delete-image', async (req, res) => {
 
 
 // Ruta para actualizar un espacio
-router.post('/update-space', upload.array('images', 10), async (req, res) => {
+router.put('/update-space', async (req, res) => {
   const { uid, name, description, phone, emailSpace } = req.body;
 
   try {
@@ -183,24 +202,6 @@ router.post('/update-space', upload.array('images', 10), async (req, res) => {
       [uid, name, description, phone, emailSpace]
     );
 
-    // Procesar imágenes para agregar
-    for (const file of req.files) {
-      const imgpath = `uploads/${file.filename}`;
-
-      const photoResult = await pool.query(
-        'INSERT INTO photos (uid, imgpath) VALUES ($1, $2) RETURNING *',
-        [uid, imgpath]
-      );
-
-      // Puedes usar photoResult.rows[0] para obtener la información de la foto recién creada si es necesario
-    }
-
-    // Procesar imágenes para borrar
-    const imagesToDelete = req.body.imagesDelete || [];
-    for (const imgpath of imagesToDelete) {
-      await pool.query('DELETE FROM photos WHERE imgpath = $1 AND uid = $2', [imgpath, uid]);
-    }
-
     res.status(200).json({ success: true, space: spaceResult.rows[0] });
   } catch (error) {
     console.error('Error al actualizar espacio:', error);
@@ -208,7 +209,11 @@ router.post('/update-space', upload.array('images', 10), async (req, res) => {
   }
 });
 
+
+
 module.exports = router;
+
+
 
 
   
